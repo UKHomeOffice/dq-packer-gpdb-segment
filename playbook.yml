@@ -83,3 +83,17 @@
       name: Start awslogs
       special_time: reboot
       job: /usr/bin/startcloudwatchlogs.sh
+
+  - name: Bootstrap
+    copy:
+      src: bootstrap-raid.sh
+      dest: /usr/bin/bootstrap-raid.sh
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Make Cron Job to start bootstrap-raid at boot
+    cron:
+      name: Start bootstrap
+      special_time: reboot
+      job: /usr/bin/bootstrap-raid.sh
