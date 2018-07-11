@@ -45,14 +45,14 @@
   - name: Write SWAP config to fstab
     command: echo "/dm-2 swap swap defaults 0 0" >> /etc/fstab
 
-  - name: Set scheduler to NONE
-    command: echo deadline > /sys/block/md0/queue/scheduler
+  - name: Set scheduler deadline
+    command: grubby --update-kernel=ALL --args="elevator=deadline"
 
   - name: Set read ahead to 16GB
     command: /sbin/blockdev --setra 16384 /dev/md0
 
   - name: Disable tranparent huge pages
-    command: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+    command: grubby --update-kernel=ALL --args="transparent_hugepage=never"
 
   - name: Insert Greenplum config to /etc/sysctl.conf
     blockinfile:
