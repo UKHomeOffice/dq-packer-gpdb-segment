@@ -49,9 +49,6 @@
   - name: Set scheduler deadline
     command: grubby --update-kernel=ALL --args="elevator=deadline"
 
-  - name: Set read ahead to 16GB
-    command: /sbin/blockdev --setra 16384 /dev/md0
-
   - name: Disable tranparent huge pages
     command: grubby --update-kernel=ALL --args="transparent_hugepage=never"
 
