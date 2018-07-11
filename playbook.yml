@@ -29,9 +29,9 @@
 
   - name: Set SWAP file permissions
     file: /dm-2
-    owner: root
-    group: root
-    mode: 0600
+      owner: root
+      group: root
+      mode: 0600
 
   - name: Make SWAP file
     command: mkswap /dm-2
