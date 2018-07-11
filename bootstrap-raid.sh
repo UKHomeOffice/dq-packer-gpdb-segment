@@ -17,7 +17,7 @@ else
   mkdir /gpdb
   mkfs.xfs /dev/mapper/secure
   mount -o nodev,noatime,inode64,allocsize=16m /dev/mapper/secure /gpdb
-  echo "/dev/mapper/secure /gpdb xfs defaults 0 0" >> /etc/fstab
+  echo "/dev/mapper/secure /gpdb xfs nodev,noatime,inode64,allocsize=16m 0 0" >> /etc/fstab
   mdadm -E -s -v >> /etc/mdadm.conf
   tar -C / -xzvf /home/centos/md0.tgz
 fi
