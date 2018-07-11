@@ -28,7 +28,8 @@
     command: dd if=/dev/zero of=/dm-2 count=65536 bs=1MiB creates=/dm-2
 
   - name: Set SWAP file permissions
-    file: /dm-2
+    file:
+      path: /dm-2
       owner: root
       group: root
       mode: 0600
