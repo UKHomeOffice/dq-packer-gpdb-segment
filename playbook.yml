@@ -24,28 +24,6 @@
     selinux:
       state: disabled
 
-  - name: Create SWAP file
-    command: dd if=/dev/zero of=/dm-2 count=65536 bs=1MiB creates=/dm-2
-
-  - name: Set SWAP file permissions
-    file:
-      path: /dm-2
-      owner: root
-      group: root
-      mode: 0600
-
-  - name: Make SWAP file
-    command: mkswap /dm-2
-
-  - name: Turn on SWAP
-    command: swapon -v /dm-2
-
-  - name: Safety backup of fstab file
-    command: cp /etc/fstab /etc/fstab.bak
-
-  - name: Write SWAP config to fstab
-    command: echo "/dm-2 swap swap defaults 0 0" >> /etc/fstab
-
   - name: Set scheduler deadline
     command: grubby --update-kernel=ALL --args="elevator=deadline"
 
@@ -156,6 +134,9 @@
       - cryptsetup
       - cloud-utils
     become: true
+
+  - name: Update all libraries
+    yum: name=* state=latest    
 
   - name: PIP
     shell: curl https://bootstrap.pypa.io/get-pip.py | python
