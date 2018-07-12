@@ -20,10 +20,10 @@ else
   echo "/dev/mapper/secure /gpdb xfs nodev,noatime,inode64,allocsize=16m 0 0" >> /etc/fstab
   mdadm -E -s -v >> /etc/mdadm.conf
   tar -C / -xzvf /home/centos/md0.tgz
-  dd if=/dev/zero of=/dm-2 count=65536 bs=1MiB
-  chmod 600 /dm-2
-  mkswap /dm-2
-  swapon -v /dm-2
-  cp /etc/fstab /etc/fstab.bak
+  sudo dd if=/dev/zero of=/dm-2 count=65536 bs=1MiB
+  sudo chmod 600 /dm-2
+  sudo mkswap /dm-2
+  sudo swapon -v /dm-2
+  sudo cp /etc/fstab /etc/fstab.bak
   echo "/dm-2 swap swap defaults 0 0" >> /etc/fstab
 fi
