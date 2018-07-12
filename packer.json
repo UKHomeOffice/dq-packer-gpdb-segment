@@ -29,7 +29,7 @@
         }
       ],
       "ssh_username": "centos",
-      "instance_type": "t2.medium",
+      "instance_type": "d2.xlarge",
       "ami_name": "dq-gpdb-base {{isotime | clean_ami_name}}",
       "ami_users": [
         "483846886818",
