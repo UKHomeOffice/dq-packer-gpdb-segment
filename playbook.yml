@@ -93,6 +93,24 @@
       group: gpadmin
       mode: 0644
 
+  - name: Create script folder
+    file:
+      path: /home/gpadmin/GP_Shell_Scripts
+      state: directory
+      mode: 0755
+      recurse: yes
+      owner: gpadmin
+      group: gpadmin
+
+  - name: Create script log folder
+    file:
+      path: /home/gpadmin/GP_Shell_Scripts/log
+      state: directory
+      mode: 0755
+      recurse: yes
+      owner: gpadmin
+      group: gpadmin
+
   - name: Turn off SELinux
     selinux:
       state: disabled
