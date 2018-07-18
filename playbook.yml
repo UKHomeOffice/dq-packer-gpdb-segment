@@ -10,6 +10,64 @@
   hosts: all
   become: true
   tasks:
+    - name: Yum Install Pre Dependencies
+      yum: name={{ item }}
+      with_items:
+        - zip
+        - ed
+        - unzip
+        - xfsdump
+        - autoconf
+        - popt-devel
+        - zlib-devel
+        - libaio-devel
+        - mdadm
+        - iperf3
+        - fio
+        - cloud-utils
+      become: true
+
+    - name: Update all libraries
+      yum: name=* state=latest
+
+  - name: Initialise /dev/md0
+    shell: mdadm --create /dev/md0 --level=0 --raid-devices=$(echo /dev/xvd[b-z] | wc -w) $(echo /dev/xvd[b-z])
+
+  - name: Create file system
+    filesystem:
+      fstype: xfs
+      dev: /dev/md0
+
+  - name: Create mount folder
+    file:
+      path: /gpdb
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Mount RAID0
+    mount:
+      name: /gpdb
+      src: /dev/md0
+      fstype: xfs
+      opts: nodev,noatime,inode64,allocsize=16m
+      state: mounted
+
+  - name: Save RAID to fstab for persistence
+    shell: echo "/dev/md0 /gpdb xfs nodev,noatime,inode64,allocsize=16m 0 0" >> /etc/fstab
+
+  - name: Save RAID0 to mdadm for persistence
+    shell: mdadm -E -s -v >> /etc/mdadm.conf
+
+  - name: Create ephemeral directory
+    file:
+      path: /ephemeral
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+
   - name: Gpadmin group
     group:
       name: gpadmin
@@ -19,6 +77,22 @@
     user:
       name: gpadmin
       group: gpadmin
+
+  - name: Create SSH folder
+    file:
+      path: /home/gpadmin/.ssh
+      state: directory
+      owner: gpadmin
+      group: gpadmin
+      mode: 0700
+
+  - name: Create authorized_keys file
+    file:
+      path: /home/gpadmin/.ssh/authorized_keys
+      state: touch
+      owner: gpadmin
+      group: gpadmin
+      mode: 0644
 
   - name: Turn off SELinux
     selinux:
@@ -83,60 +157,43 @@
     blockinfile:
       path: /etc/hosts
       block: |
-        {{ item.ip }} {{ item.name }} {{ item.nic }} {{ item.dnsname }}
+        {{ item.ip }} {{ item.name }} {{ item.nic }} {{ item.dnsname }} {{ item.dnsshort }}
       marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.ip }}"
     with_items:
-      - { ip: 10.1.30.101, name: mdw, nic: mdw-1, dnsname: ip-10-1-30-101.eu-west-2.compute.internal }
-      - { ip: 10.1.31.101, name: mdw, nic: mdw-2, dnsname: ip-10-1-31-101.eu-west-2.compute.internal }
-      - { ip: 10.1.32.105, name: mdw, nic: mdw-3, dnsname: ip-10-1-32-105.eu-west-2.compute.internal }
-      - { ip: 10.1.33.229, name: mdw, nic: mdw-4, dnsname: ip-10-1-33-229.eu-west-2.compute.internal }
-      - { ip: 10.1.30.4, name: smdw, nic: smdw-1, dnsname: ip-10-1-30-4.eu-west-2.compute.internal }
-      - { ip: 10.1.31.234, name: smdw, nic: smdw-2, dnsname: ip-10-1-31-234.eu-west-2.compute.internal }
-      - { ip: 10.1.32.183, name: smdw, nic: smdw-3, dnsname: ip-10-1-32-183.eu-west-2.compute.internal }
-      - { ip: 10.1.33.86, name: smdw, nic: smdw-4, dnsname: ip-10-1-33-86.eu-west-2.compute.internal }
-      - { ip: 10.1.30.224, name: sdw1, nic: sdw1-1, dnsname: ip-10-1-30-224.eu-west-2.compute.internal }
-      - { ip: 10.1.31.66, name: sdw1, nic: sdw1-2, dnsname: ip-10-1-31-66.eu-west-2.compute.internal }
-      - { ip: 10.1.32.150, name: sdw1, nic: sdw1-3, dnsname: ip-10-1-32-150.eu-west-2.compute.internal }
-      - { ip: 10.1.33.179, name: sdw1, nic: sdw1-4, dnsname: ip-10-1-33-179.eu-west-2.compute.internal }
-      - { ip: 10.1.30.9, name: sdw2, nic: sdw2-1, dnsname: ip-10-1-30-9.eu-west-2.compute.internal }
-      - { ip: 10.1.31.159, name: sdw2, nic: sdw2-2, dnsname: ip-10-1-31-159.eu-west-2.compute.internal }
-      - { ip: 10.1.32.164, name: sdw2, nic: sdw2-3, dnsname: ip-10-1-32-164.eu-west-2.compute.internal }
-      - { ip: 10.1.33.14, name: sdw2, nic: sdw2-4, dnsname: ip-10-1-33-14.eu-west-2.compute.internal }
-      - { ip: 10.1.30.143, name: sdw3, nic: sdw3-1, dnsname: ip-10-1-30-143.eu-west-2.compute.internal }
-      - { ip: 10.1.31.168, name: sdw3, nic: sdw3-2, dnsname: ip-10-1-31-168.eu-west-2.compute.internal }
-      - { ip: 10.1.32.221, name: sdw3, nic: sdw3-3, dnsname: ip-10-1-32-221.eu-west-2.compute.internal }
-      - { ip: 10.1.33.246, name: sdw3, nic: sdw3-4, dnsname: ip-10-1-33-246.eu-west-2.compute.internal }
-      - { ip: 10.1.30.10, name: sdw4, nic: sdw4-1, dnsname: ip-10-1-30-10.eu-west-2.compute.internal }
-      - { ip: 10.1.31.11, name: sdw4, nic: sdw4-2, dnsname: ip-10-1-31-11.eu-west-2.compute.internal }
-      - { ip: 10.1.32.12, name: sdw4, nic: sdw4-3, dnsname: ip-10-1-32-12.eu-west-2.compute.internal }
-      - { ip: 10.1.33.13, name: sdw4, nic: sdw4-4, dnsname: ip-10-1-33-13.eu-west-2.compute.internal }
-      - { ip: 10.1.30.20, name: sdw5, nic: sdw5-1, dnsname: ip-10-1-30-20.eu-west-2.compute.internal }
-      - { ip: 10.1.31.21, name: sdw5, nic: sdw5-2, dnsname: ip-10-1-31-21.eu-west-2.compute.internal }
-      - { ip: 10.1.32.22, name: sdw5, nic: sdw5-3, dnsname: ip-10-1-32-22.eu-west-2.compute.internal }
-      - { ip: 10.1.33.23, name: sdw5, nic: sdw5-4, dnsname: ip-10-1-33-23.eu-west-2.compute.internal }
-      - { ip: 10.1.30.30, name: sdw6, nic: sdw6-1, dnsname: ip-10-1-30-30.eu-west-2.compute.internal }
-      - { ip: 10.1.31.31, name: sdw6, nic: sdw6-2, dnsname: ip-10-1-31-31.eu-west-2.compute.internal }
-      - { ip: 10.1.32.32, name: sdw6, nic: sdw6-3, dnsname: ip-10-1-32-32.eu-west-2.compute.internal }
-      - { ip: 10.1.33.33, name: sdw6, nic: sdw6-4, dnsname: ip-10-1-33-33.eu-west-2.compute.internal }
-
-  - name: Yum Install Pre Dependencies
-    yum: name={{ item }}
-    with_items:
-      - zip
-      - ed
-      - unzip
-      - xfsdump
-      - autoconf
-      - popt-devel
-      - zlib-devel
-      - libaio-devel
-      - mdadm
-      - cryptsetup
-      - cloud-utils
-    become: true
-
-  - name: Update all libraries
-    yum: name=* state=latest    
+      - { ip: 10.1.30.101, name: mdw, nic: mdw-1, dnsname: ip-10-1-30-101.eu-west-2.compute.internal, dnsshort: ip-10-1-30-101 }
+      - { ip: 10.1.31.101, name: mdw, nic: mdw-2, dnsname: ip-10-1-31-101.eu-west-2.compute.internal, dnsshort: ip-10-1-31-101 }
+      - { ip: 10.1.32.105, name: mdw, nic: mdw-3, dnsname: ip-10-1-32-105.eu-west-2.compute.internal, dnsshort: ip-10-1-32-105 }
+      - { ip: 10.1.33.229, name: mdw, nic: mdw-4, dnsname: ip-10-1-33-229.eu-west-2.compute.internal, dnsshort: ip-10-1-33-229 }
+      - { ip: 10.1.30.4, name: smdw, nic: smdw-1, dnsname: ip-10-1-30-4.eu-west-2.compute.internal, dnsshort: ip-10-1-30-4 }
+      - { ip: 10.1.31.234, name: smdw, nic: smdw-2, dnsname: ip-10-1-31-234.eu-west-2.compute.internal, dnsshort: ip-10-1-31-234 }
+      - { ip: 10.1.32.183, name: smdw, nic: smdw-3, dnsname: ip-10-1-32-183.eu-west-2.compute.internal, dnsshort: ip-10-1-32-183 }
+      - { ip: 10.1.33.86, name: smdw, nic: smdw-4, dnsname: ip-10-1-33-86.eu-west-2.compute.internal, dnsshort: ip-10-1-33-86 }
+      - { ip: 10.1.30.224, name: sdw1, nic: sdw1-1, dnsname: ip-10-1-30-224.eu-west-2.compute.internal, dnsshort: ip-10-1-30-224 }
+      - { ip: 10.1.31.66, name: sdw1, nic: sdw1-2, dnsname: ip-10-1-31-66.eu-west-2.compute.internal, dnsshort: ip-10-1-31-66 }
+      - { ip: 10.1.32.150, name: sdw1, nic: sdw1-3, dnsname: ip-10-1-32-150.eu-west-2.compute.internal, dnsshort: ip-10-1-32-150 }
+      - { ip: 10.1.33.179, name: sdw1, nic: sdw1-4, dnsname: ip-10-1-33-179.eu-west-2.compute.internal, dnsshort: ip-10-1-33-179 }
+      - { ip: 10.1.30.9, name: sdw2, nic: sdw2-1, dnsname: ip-10-1-30-9.eu-west-2.compute.internal, dnsshort: ip-10-1-30-9 }
+      - { ip: 10.1.31.159, name: sdw2, nic: sdw2-2, dnsname: ip-10-1-31-159.eu-west-2.compute.internal, dnsshort: ip-10-1-31-159 }
+      - { ip: 10.1.32.164, name: sdw2, nic: sdw2-3, dnsname: ip-10-1-32-164.eu-west-2.compute.internal, dnsshort: ip-10-1-32-164 }
+      - { ip: 10.1.33.14, name: sdw2, nic: sdw2-4, dnsname: ip-10-1-33-14.eu-west-2.compute.internal, dnsshort: ip-10-1-33-14 }
+      - { ip: 10.1.30.143, name: sdw3, nic: sdw3-1, dnsname: ip-10-1-30-143.eu-west-2.compute.internal, dnsshort: ip-10-1-30-143 }
+      - { ip: 10.1.31.168, name: sdw3, nic: sdw3-2, dnsname: ip-10-1-31-168.eu-west-2.compute.internal, dnsshort: ip-10-1-31-168 }
+      - { ip: 10.1.32.221, name: sdw3, nic: sdw3-3, dnsname: ip-10-1-32-221.eu-west-2.compute.internal, dnsshort: ip-10-1-32-221 }
+      - { ip: 10.1.33.246, name: sdw3, nic: sdw3-4, dnsname: ip-10-1-33-246.eu-west-2.compute.internal, dnsshort: ip-10-1-33-246 }
+      - { ip: 10.1.30.10, name: sdw4, nic: sdw4-1, dnsname: ip-10-1-30-10.eu-west-2.compute.internal, dnsshort: ip-10-1-30-10 }
+      - { ip: 10.1.31.11, name: sdw4, nic: sdw4-2, dnsname: ip-10-1-31-11.eu-west-2.compute.internal, dnsshort: ip-10-1-31-11 }
+      - { ip: 10.1.32.12, name: sdw4, nic: sdw4-3, dnsname: ip-10-1-32-12.eu-west-2.compute.internal, dnsshort: ip-10-1-32-12 }
+      - { ip: 10.1.33.13, name: sdw4, nic: sdw4-4, dnsname: ip-10-1-33-13.eu-west-2.compute.internal, dnsshort: ip-10-1-33-13 }
+      - { ip: 10.1.30.20, name: sdw5, nic: sdw5-1, dnsname: ip-10-1-30-20.eu-west-2.compute.internal, dnsshort: ip-10-1-30-20 }
+      - { ip: 10.1.31.21, name: sdw5, nic: sdw5-2, dnsname: ip-10-1-31-21.eu-west-2.compute.internal, dnsshort: ip-10-1-31-21 }
+      - { ip: 10.1.32.22, name: sdw5, nic: sdw5-3, dnsname: ip-10-1-32-22.eu-west-2.compute.internal, dnsshort: ip-10-1-32-22 }
+      - { ip: 10.1.33.23, name: sdw5, nic: sdw5-4, dnsname: ip-10-1-33-23.eu-west-2.compute.internal, dnsshort: ip-10-1-33-23 }
+      - { ip: 10.1.30.30, name: sdw6, nic: sdw6-1, dnsname: ip-10-1-30-30.eu-west-2.compute.internal, dnsshort: ip-10-1-30-30 }
+      - { ip: 10.1.31.31, name: sdw6, nic: sdw6-2, dnsname: ip-10-1-31-31.eu-west-2.compute.internal, dnsshort: ip-10-1-31-31 }
+      - { ip: 10.1.32.32, name: sdw6, nic: sdw6-3, dnsname: ip-10-1-32-32.eu-west-2.compute.internal, dnsshort: ip-10-1-32-32 }
+      - { ip: 10.1.33.33, name: sdw6, nic: sdw6-4, dnsname: ip-10-1-33-33.eu-west-2.compute.internal, dnsshort: ip-10-1-33-33 }
+      - { ip: 10.1.6.100, name: DATA-INGEST1, nic: data-ingest1, dnsname: ip-10-1-6-100.eu-west-2.compute.internal, dnsshort: ip-10-1-6-100 }
+      - { ip: 10.1.8.100, name: DATA-PIPELINE1, nic: data-pipeline1, dnsname: ip-10-1-8-100.eu-west-2.compute.internal, dnsshort: ip-10-1-8-100 }
 
   - name: PIP
     shell: curl https://bootstrap.pypa.io/get-pip.py | python
@@ -160,21 +217,37 @@
       content: |
         [general]
         state_file = /var/awslogs/state/agent-state
-        [/var/log/syslog]
-        file = /var/log/syslog
+        [/var/log/messages]
+        file = /var/log/messages
         log_group_name = /GPDB/system
-        log_stream_name = {instance_id}
+        log_stream_name = {hostname}
         datetime_format = %b %d %H:%M:%S
         [/GPDB/cloud-init]
         file = /var/log/cloud-init.log
         log_group_name = /GPDB/cloud-init
-        log_stream_name = {instance_id}
+        log_stream_name = {hostname}
         datetime_format = %Y-%m-%d %H:%M:%S,%f
-        [/GPDB/cloud-init/output]
-        file = /var/log/cloud-init-output.log
-        log_group_name = /GPDB/cloud-init/output
-        log_stream_name = {instance_id}
+        [/GPDB/awslogs]
+        file = /var/log/awslogs.log
+        log_group_name = /GPDB/awslogs.log
+        log_stream_name = {hostname}
         datetime_format = %Y-%m-%d %H:%M:%S,%f
+        [/GPDB/secure]
+        file = /var/log/secure
+        log_group_name = /GPDB/secure
+        log_stream_name = {hostname}
+        datetime_format = %Y-%m-%d %H:%M:%S,%f
+        [/GPDB/cron]
+        file = /var/log/cron
+        log_group_name = /GPDB/cron
+        log_stream_name = {hostname}
+        datetime_format = %Y-%m-%d %H:%M:%S,%f
+        [/GPDB/S3_upload]
+        file = /home/gpadmin/GP_Shell_Scripts/log/S3_*
+        log_group_name = /GPDB/S3_upload
+        log_stream_name = {hostname}
+        datetime_format = %Y-%m-%d %H:%M:%S,%f
+
   - name: Install cloudwatch log agent
     environment:
       LC_ALL: C
@@ -208,4 +281,22 @@
     cron:
       name: Start bootstrap
       special_time: reboot
-      job: /usr/bin/bootstrap-raid.sh
+      job: /usr/bin/bootstrap-raid.sh > /var/log/swap_setup.log 2>&1
+      state: present
+
+  - name: Copy S3 backup script
+    copy:
+      src: s3_upload.sh
+      dest: /home/gpadmin/GP_Shell_Scripts/s3_upload.sh
+      owner: gpadmin
+      group: gpadmin
+      mode: 0755
+
+  - name: Make Cron Job to run S3 transfer at 2AM
+    cron:
+      name: Start S3 transfer
+      minute: 0
+      hour: 2
+      user: gpadmin
+      job: /home/gpadmin/GP_Shell_Scripts/s3_upload.sh > /home/gpadmin/GP_Shell_Scripts/log/S3_upload.log_$(date +\%Y\%m\%d_\%H:\%M) 2>&1
+      state: present

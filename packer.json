@@ -26,10 +26,28 @@
           "volume_size": 200,
           "volume_type": "gp2",
           "delete_on_termination": true
+        },
+        {
+          "device_name": "xvdb",
+          "volume_size": 500,
+          "volume_type": "gp2",
+          "delete_on_termination": true
+        },
+        {
+          "device_name": "xvdc",
+          "volume_size": 500,
+          "volume_type": "gp2",
+          "delete_on_termination": true
+        },
+        {
+          "device_name": "xvdd",
+          "volume_size": 500,
+          "volume_type": "gp2",
+          "delete_on_termination": true
         }
       ],
       "ssh_username": "centos",
-      "instance_type": "d2.xlarge",
+      "instance_type": "t2.xlarge",
       "ami_name": "dq-gpdb-base {{isotime | clean_ami_name}}",
       "ami_users": [
         "483846886818",
