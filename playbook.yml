@@ -25,7 +25,6 @@
         - iperf3
         - fio
         - cloud-utils
-      become: true
 
     - name: Update all libraries
       yum: name=* state=latest
