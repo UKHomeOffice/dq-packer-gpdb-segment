@@ -25,6 +25,8 @@
       - iperf3
       - fio
       - cloud-utils
+      - wget
+      - gcc
 
   - name: Update all libraries
     yum: name=* state=latest
@@ -212,6 +214,33 @@
       - { ip: 10.1.6.100, name: DATA-INGEST1, nic: data-ingest1, dnsname: ip-10-1-6-100.eu-west-2.compute.internal, dnsshort: ip-10-1-6-100 }
       - { ip: 10.1.8.100, name: DATA-PIPELINE1, nic: data-pipeline1, dnsname: ip-10-1-8-100.eu-west-2.compute.internal, dnsshort: ip-10-1-8-100 }
 
+  - name: Create GPDB directory structure
+    file:
+      path: /gpdb/{{ item }}
+      state: directory
+      mode: 0755
+      recurse: yes
+      owner: gpadmin
+      group: gpadmin
+    with_items:
+      - data1/primary
+      - data2/primary
+      - data3/primary
+      - data4/primary
+      - data5/primary
+      - data6/primary
+      - data7/primary
+      - data8/primary
+      - data1/mirror
+      - data2/mirror
+      - data3/mirror
+      - data4/mirror
+      - data5/mirror
+      - data6/mirror
+      - data7/mirror
+      - data8/mirror
+      - master
+
   - name: PIP
     shell: curl https://bootstrap.pypa.io/get-pip.py | python
     args:
@@ -298,7 +327,7 @@
     cron:
       name: Start bootstrap
       special_time: reboot
-      job: /usr/bin/bootstrap-raid.sh > /var/log/swap_setup.log 2>&1
+      job: /usr/bin/bootstrap-raid.sh > /var/log/swap_setup_$(date +\%Y\%m\%d_\%H:\%M).log 2>&1
       state: present
 
   - name: Copy S3 backup script
@@ -316,4 +345,19 @@
       hour: 2
       user: gpadmin
       job: /home/gpadmin/GP_Shell_Scripts/s3_upload.sh > /home/gpadmin/GP_Shell_Scripts/log/S3_upload.log_$(date +\%Y\%m\%d_\%H:\%M) 2>&1
+      state: present
+
+  - name: Copy Ephemeral storage folder structure setup script
+    copy:
+      src: ephemeral_folders.sh
+      dest: /usr/bin/ephemeral_folders.sh
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Make Cron Job to start ephemeral folder setup at boot with 120sec delay
+    cron:
+      name: Start ephemeral folder setup
+      special_time: reboot
+      job: sleep 120 && /usr/bin/ephemeral_folders.sh > /var/log/ephemeral_folders_$(date +\%Y\%m\%d_\%H:\%M).log 2>&1
       state: present
