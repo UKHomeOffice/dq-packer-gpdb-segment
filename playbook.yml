@@ -21,6 +21,7 @@
       - popt-devel
       - zlib-devel
       - libaio-devel
+      - cryptsetup
       - iperf3
       - fio
       - cloud-utils
