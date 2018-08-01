@@ -314,7 +314,7 @@
       minute: 0
       hour: 2
       user: gpadmin
-      job: /home/gpadmin/GP_Shell_Scripts/s3_upload.sh > /home/gpadmin/GP_Shell_Scripts/log/S3_upload.log_$(date +\%Y\%m\%d_\%H:\%M) 2>&1
+      job: sh -c ". /home/gpadmin/GP_Shell_Scripts/script_envs.sh && /home/gpadmin/GP_Shell_Scripts/s3_upload.sh > /home/gpadmin/GP_Shell_Scripts/log/S3_upload.log_$(date +\%Y\%m\%d_\%H:\%M) 2>&1"
       state: present
 
   - name: Copy Ephemeral storage folder structure setup script
