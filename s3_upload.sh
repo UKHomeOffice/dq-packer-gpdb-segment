@@ -14,4 +14,19 @@ echo 'Latest folder found: '$Latest_backup''
 
 echo 'Upload to: '$S3_bucket' started'
 
-aws s3 cp $GP_backup_location/$Latest_backup s3://$S3_bucket/$Latest_backup --recursive
+function s3_upload {
+  upload=$(aws s3 cp $GP_backup_location/$Latest_backup s3://$S3_bucket/$Latest_backup --recursive)
+  echo 'Data Upload completed'
+}
+
+function main {
+  if s3_upload
+    then
+      echo 'Removing local folder '$Latest_backup''
+      rm -rf $Latest_backup
+  fi
+}
+
+main
+
+exit
